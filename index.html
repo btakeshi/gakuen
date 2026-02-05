@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Drill - 練習中</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Roboto+Serif:ital,wght@0,700;1,700&display=swap');
+        body { font-family: 'Noto Sans JP', sans-serif; }
+        .math-font { font-family: 'Roboto Serif', serif; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen flex flex-col items-center justify-center p-4 text-slate-800">
+
+    <div id="app" class="w-full max-w-md bg-white rounded-3xl shadow-xl overflow-hidden border border-slate-100 opacity-0 transition-opacity duration-500">
+        <!-- Header -->
+        <div class="bg-indigo-600 p-6 text-white flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <a href="index.html" class="hover:bg-indigo-500 p-1 rounded-lg transition-colors">
+                    <i data-lucide="arrow-left"></i>
+                </a>
+                <h1 id="drill-title" class="text-xl font-bold tracking-tight">Loading...</h1>
+            </div>
+            <div class="bg-indigo-500/50 px-3 py-1 rounded-full text-sm font-medium">
+                Score: <span id="correct-count">0</span> / <span id="total-count">0</span>
+            </div>
+        </div>
+
+        <!-- Question Area -->
+        <div class="p-8 flex flex-col items-center">
+            <div class="w-full flex justify-between mb-6 text-xs font-bold uppercase tracking-wider text-slate-400">
+                <span id="question-id">Question #--</span>
+                <span id="difficulty-badge" class="px-2 py-0.5 rounded italic">Difficulty</span>
+            </div>
+
+            <div id="question-text" class="text-4xl md:text-5xl my-8 text-center font-bold min-h-[1.5em] flex items-center justify-center">
+                ...
+            </div>
+
+            <!-- Input Form -->
+            <div class="w-full space-y-4">
+                <div class="relative">
+                    <input
+                        type="text"
+                        id="user-answer"
+                        autocomplete="off"
+                        placeholder="答えを入力..."
+                        class="w-full text-2xl p-4 rounded-2xl border-2 border-slate-200 focus:border-indigo-500 bg-slate-50 transition-all text-center outline-none"
+                    />
+                    <div id="status-icon-correct" class="hidden absolute right-4 top-1/2 -translate-y-1/2 text-green-500">
+                        <i data-lucide="check-circle-2" size="32"></i>
+                    </div>
+                    <div id="status-icon-wrong" class="hidden absolute right-4 top-1/2 -translate-y-1/2 text-red-500">
+                        <i data-lucide="x-circle" size="32"></i>
+                    </div>
+                </div>
+
+                <button id="submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl transition-all shadow-lg shadow-indigo-200 active:scale-95 flex items-center justify-center gap-2">
+                    解答する
+                </button>
+
+                <div id="result-area" class="hidden flex flex-col items-center gap-3 text-center">
+                    <div id="result-message" class="text-lg font-bold"></div>
+                    <button id="next-btn" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2">
+                        次の問題 <i data-lucide="chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let questionDatabase = [];
+        let currentQuestion = null;
+        let stats = { correct: 0, total: 0 };
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const dataKey = urlParams.get('data') || 'grade1';
+
+        async function initDrill() {
+            try {
+                // 設定と問題データを動的にロード
+                const [settingsRes, questionsRes] = await Promise.all([
+                    fetch('data/settings.json'),
+                    fetch(`data/${dataKey}.json`)
+                ]);
+                
+                const settings = await settingsRes.json();
+                questionDatabase = await questionsRes.json();
+                
+                const courseInfo = settings.courses.find(c => c.id === dataKey);
+                document.getElementById('drill-title').innerText = courseInfo ? courseInfo.title : "Math Drill";
+                document.title = `${document.getElementById('drill-title').innerText} - Math Drill`;
+                
+                document.getElementById('app').classList.remove('opacity-0');
+                lucide.createIcons();
+                pickQuestion();
+            } catch (err) {
+                alert("データの読み込みに失敗しました。パスを確認してください。");
+            }
+        }
+
+        function pickQuestion() {
+            const randomIndex = Math.floor(Math.random() * questionDatabase.length);
+            currentQuestion = questionDatabase[randomIndex];
+            
+            const qText = document.getElementById('question-text');
+            qText.innerText = currentQuestion.question;
+            document.getElementById('question-id').innerText = `ID #${currentQuestion.id || randomIndex + 1}`;
+            
+            const diffBadge = document.getElementById('difficulty-badge');
+            diffBadge.innerText = currentQuestion.difficulty || 'Normal';
+            diffBadge.className = "px-2 py-0.5 rounded text-xs font-bold uppercase bg-indigo-100 text-indigo-600";
+
+            if(currentQuestion.latex) qText.classList.add('math-font', 'italic');
+            else qText.classList.remove('math-font', 'italic');
+
+            document.getElementById('user-answer').value = '';
+            document.getElementById('user-answer').disabled = false;
+            document.getElementById('user-answer').className = "w-full text-2xl p-4 rounded-2xl border-2 border-slate-200 focus:border-indigo-500 bg-slate-50 transition-all text-center outline-none";
+            document.getElementById('submit-btn').classList.remove('hidden');
+            document.getElementById('result-area').classList.add('hidden');
+            document.getElementById('status-icon-correct').classList.add('hidden');
+            document.getElementById('status-icon-wrong').classList.add('hidden');
+            document.getElementById('user-answer').focus();
+        }
+
+        function checkAnswer() {
+            const input = document.getElementById('user-answer');
+            const val = input.value.trim();
+            if (!val) return;
+
+            const isCorrect = val === currentQuestion.answer;
+            stats.total++;
+            input.disabled = true;
+            document.getElementById('submit-btn').classList.add('hidden');
+            document.getElementById('result-area').classList.remove('hidden');
+
+            if (isCorrect) {
+                stats.correct++;
+                input.classList.add('border-green-500', 'bg-green-50', 'text-green-700');
+                document.getElementById('result-message').innerText = "正解です！🎉";
+                document.getElementById('result-message').className = "text-lg font-bold text-green-600";
+                document.getElementById('status-icon-correct').classList.remove('hidden');
+            } else {
+                input.classList.add('border-red-500', 'bg-red-50', 'text-red-700');
+                document.getElementById('result-message').innerText = `答えは ${currentQuestion.answer}`;
+                document.getElementById('result-message').className = "text-lg font-bold text-red-600";
+                document.getElementById('status-icon-wrong').classList.remove('hidden');
+            }
+
+            document.getElementById('correct-count').innerText = stats.correct;
+            document.getElementById('total-count').innerText = stats.total;
+        }
+
+        document.getElementById('submit-btn').addEventListener('click', checkAnswer);
+        document.getElementById('user-answer').addEventListener('keypress', (e) => e.key === 'Enter' && checkAnswer());
+        document.getElementById('next-btn').addEventListener('click', pickQuestion);
+
+        initDrill();
+    </script>
+</body>
+</html>

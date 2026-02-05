@@ -1,0 +1,26 @@
+{
+  "siteTitle": "みんなの数学ドリル",
+  "courses": [
+    {
+      "id": "grade1",
+      "title": "小学1年生 数学",
+      "description": "たしざんとひきざんのきほん",
+      "dataFile": "data/grade1.json",
+      "icon": "baby"
+    },
+    {
+      "id": "grade2",
+      "title": "小学2年生 数学",
+      "description": "かけ算九九と図形",
+      "dataFile": "data/grade2.json",
+      "icon": "pencil"
+    },
+    {
+      "id": "advanced",
+      "title": "中学生レベル",
+      "description": "方程式とルートの計算",
+      "dataFile": "data/advanced.json",
+      "icon": "brain"
+    }
+  ]
+}
